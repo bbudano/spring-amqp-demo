@@ -1,0 +1,50 @@
+version: '3.8'
+
+networks:
+  spring-amqp-demo:
+    name: spring-amqp-demo
+    driver: bridge
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:management
+    networks:
+      - spring-amqp-demo
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  ping-service:
+    build: ./ping-service
+    image: ping-service
+    environment:
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    healthcheck:
+      test: "curl --fail --silent http://localhost:8080/actuator/health | grep UP || exit 1"
+      interval: 30s
+      timeout: 5s
+    restart: always
+    networks:
+      - spring-amqp-demo
+    ports:
+      - "8080:8080"
+    depends_on:
+      - rabbitmq
+
+  pong-service:
+    build: ./pong-service
+    image: pong-service
+    environment:
+      - SPRING_RABBITMQ_HOST=rabbitmq
+    healthcheck:
+      test: "curl --fail --silent http://localhost:8081/actuator/health | grep UP || exit 1"
+      interval: 30s
+      timeout: 5s
+    restart: always
+    networks:
+      - spring-amqp-demo
+    ports:
+      - "8081:8081"
+    depends_on:
+      - rabbitmq
